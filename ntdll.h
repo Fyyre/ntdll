@@ -1,9 +1,10 @@
 /*
 	ntdll.h
 	User Mode, 32bit & 64bit version
-	Visual Studio 6.0 - Visual Studio 2010 compatible
+	Visual Studio 6.0 - Visual Studio 2010 and MingW compatible
 	Intel C++ Compiler (ICL) 11.x - 12.x prefered
 
+	(c) 2019 - Rokas Kupstys
 	(c) 2009, 2010, 2011 - Fyyre
 	(c) 2011 - 2012 EP_X0FF
 	(c) 2011 - rndbit
@@ -36,10 +37,6 @@ extern "C" {
 #include <wtypes.h>
 #include <basetsd.h>
 
-#if defined(__cplusplus)
-}
-#endif
-
 #if !defined(NTSTATUS)
 typedef LONG NTSTATUS;
 typedef NTSTATUS *PNTSTATUS;
@@ -56,7 +53,9 @@ typedef LONG SECURITY_STATUS;
 
 #define EXTERNAL extern "C"
 
+#ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(P)	(P)
+#endif
 
 #include "ntstatus.h"
 
@@ -529,7 +528,8 @@ typedef struct _OBJECT_DIRECTORY_INFORMATION {
     UNICODE_STRING TypeName;
 } OBJECT_DIRECTORY_INFORMATION, *POBJECT_DIRECTORY_INFORMATION;
 
-#if defined(_WINNT_) && (_MSC_VER < 1300)
+#if defined(_WINNT_) && (_MSC_VER < 1300) && !defined(___PROCESSOR_NUMBER_DEFINED)
+#define ___PROCESSOR_NUMBER_DEFINED
 typedef struct _PROCESSOR_NUMBER {
 	WORD Group;
 	BYTE Number;
@@ -2525,7 +2525,7 @@ typedef struct _SYSDBG_CONTROL_SPACE
 	ULONG Processor;
 } SYSDBG_CONTROL_SPACE, *PSYSDBG_CONTROL_SPACE;
 
-enum _INTERFACE_TYPE;
+enum _INTERFACE_TYPE { };
 
 typedef struct _SYSDBG_IO_SPACE
 {
@@ -2543,7 +2543,23 @@ typedef struct _SYSDBG_MSR
 	ULONG64 Data;
 } SYSDBG_MSR, *PSYSDBG_MSR;
 
-enum _BUS_DATA_TYPE;
+typedef enum _BUS_DATA_TYPE
+{
+    ConfigurationSpaceUndefined = -1,
+    Cmos,
+    EisaConfiguration,
+    Pos,
+    CbusConfiguration,
+    PCIConfiguration,
+    VMEConfiguration,
+    NuBusConfiguration,
+    PCMCIAConfiguration,
+    MPIConfiguration,
+    MPSAConfiguration,
+    PNPISAConfiguration,
+    SgiInternalConfiguration,
+    MaximumBusDataType
+} BUS_DATA_TYPE, *PBUS_DATA_TYPE;
 
 typedef struct _SYSDBG_BUS_DATA
 {
@@ -2897,7 +2913,9 @@ typedef enum _PROCESS_TLS_INFORMATION_TYPE
 #define JOB_OBJECT_QUERY										(0x0004)
 #define JOB_OBJECT_TERMINATE								(0x0008)
 #define JOB_OBJECT_SET_SECURITY_ATTRIBUTES  (0x0010)
+#ifndef _WINNT_
 #define JOB_OBJECT_ALL_ACCESS								(STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1F )
+#endif
 
 #define PEB_STDIO_HANDLE_NATIVE     0
 #define PEB_STDIO_HANDLE_SUBSYS     1
@@ -2920,7 +2938,9 @@ typedef ULONG GDI_HANDLE_BUFFER[GDI_HANDLE_BUFFER_SIZE];
 #define FOREGROUND_BASE_PRIORITY  9
 #define NORMAL_BASE_PRIORITY      8
 
+#ifndef FILE_READ_ACCESS
 #define FILE_READ_ACCESS ( 0x0001 )
+#endif
 
 typedef enum _FILE_INFORMATION_CLASS
 {
@@ -5864,10 +5884,6 @@ typedef struct _PORT_DATA_INFORMATION {
 	PORT_DATA_ENTRY DataEntries[1];
 } PORT_DATA_INFORMATION, *PPORT_DATA_INFORMATION;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 	//
 	// csrss & csrsrv related
 	//
@@ -5981,10 +5997,6 @@ typedef struct _CSR_CALLBACK_INFO
 	ULONG MaxApiNumber;
 	PCSR_CALLBACK_ROUTINE *CallbackDispatchTable;
 } CSR_CALLBACK_INFO, *PCSR_CALLBACK_INFO;
-
-#ifdef __cplusplus
-}
-#endif
 
 // end csrss
 
@@ -6191,7 +6203,7 @@ typedef struct _BASE_SET_REENTER_COUNT
 	ULONG fIncDec;
 } BASE_SET_REENTER_COUNT, *PBASE_SET_REENTER_COUNT;	// <size 0x8>
 
-#if !defined(_WINNT_) && ( _MSC_VER >= 1300 )
+#if !defined(_WINNT_) || (defined(_MSC_VER) && (_MSC_VER >= 1300))
 typedef enum
 {
     ACTCTX_RUN_LEVEL_UNSPECIFIED = 0,
@@ -6208,25 +6220,8 @@ typedef struct _ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {
 } ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION, * PACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION;
 
 typedef const struct _ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION * PCACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION;
-#else
-#if defined(_WINNT_) && (_MSC_VER < 1300)
-typedef enum
-{
-    ACTCTX_RUN_LEVEL_UNSPECIFIED = 0,
-    ACTCTX_RUN_LEVEL_AS_INVOKER,
-    ACTCTX_RUN_LEVEL_HIGHEST_AVAILABLE,
-    ACTCTX_RUN_LEVEL_REQUIRE_ADMIN,
-    ACTCTX_RUN_LEVEL_NUMBERS
-} ACTCTX_REQUESTED_RUN_LEVEL;
 
-typedef struct _ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION {
-    DWORD ulFlags;
-    ACTCTX_REQUESTED_RUN_LEVEL  RunLevel;
-    DWORD UiAccess;
-} ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION, * PACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION;
 
-typedef const struct _ACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION * PCACTIVATION_CONTEXT_RUN_LEVEL_INFORMATION;
-#endif
 #endif
 
 typedef struct _BASE_SXS_CREATEPROCESS_MSG
@@ -7353,28 +7348,6 @@ typedef enum _SUITE_TYPE
 #define VER_SUITE_SECURITY_APPLIANCE        0x00001000
 #define VER_SUITE_STORAGE_SERVER            0x00002000
 #define VER_SUITE_COMPUTE_SERVER            0x00004000
-
-//
-// add here
-//
-
-typedef enum _BUS_DATA_TYPE
-{
-	ConfigurationSpaceUndefined = -1,
-	Cmos,
-	EisaConfiguration,
-	Pos,
-	CbusConfiguration,
-	PCIConfiguration,
-	VMEConfiguration,
-	NuBusConfiguration,
-	PCMCIAConfiguration,
-	MPIConfiguration,
-	MPSAConfiguration,
-	PNPISAConfiguration,
-	SgiInternalConfiguration,
-	MaximumBusDataType
-} BUS_DATA_TYPE, *PBUS_DATA_TYPE;
 
 //
 // exception structures
@@ -8651,10 +8624,6 @@ NTSTATUS
 LsaLookupFreeMemory(
 	IN PVOID Buffer
 	);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif // _LSALOOKUP_
 
@@ -10673,7 +10642,7 @@ typedef enum _ALTERNATIVE_ARCHITECTURE_TYPE
 #define PROCESSOR_FEATURE_MAX 64
 #define MAX_WOW64_SHARED_ENTRIES 16
 
-#if (_MSC_VER < 1300)
+#if defined(_MSC_VER) && (_MSC_VER < 1300)
 
 #define XSTATE_LEGACY_FLOATING_POINT        0
 #define XSTATE_LEGACY_SSE                   1
@@ -10689,7 +10658,7 @@ typedef enum _ALTERNATIVE_ARCHITECTURE_TYPE
 //
 // Extended processor state configuration
 //
-
+#if defined(_WINNT_) && defined(_MSC_VER) && _MSC_VER < 1300
 typedef struct _XSTATE_FEATURE {
     DWORD Offset;
     DWORD Size;
@@ -10708,6 +10677,7 @@ typedef struct _XSTATE_CONFIGURATION {
     XSTATE_FEATURE Features[MAXIMUM_XSTATE_FEATURES];
 
 } XSTATE_CONFIGURATION, *PXSTATE_CONFIGURATION;
+#endif
 
 #ifndef _WINDOWS_
 typedef enum _HEAP_INFORMATION_CLASS {
@@ -11205,7 +11175,7 @@ typedef struct _RTL_MEMORY_ZONE_SEGMENT
 	PVOID Limit;
 } RTL_MEMORY_ZONE_SEGMENT, *PRTL_MEMORY_ZONE_SEGMENT;
 
-#if defined(_WINNT_) && (_MSC_VER < 1300)
+#if defined(_WINNT_) && defined(_MSC_VER) && (_MSC_VER < 1300)
 typedef struct _RTL_SRWLOCK {                            
 	PVOID Ptr;                                       
 } RTL_SRWLOCK, *PRTL_SRWLOCK; 
@@ -11479,10 +11449,6 @@ RtlGetIntegerAtom(
 	OUT OPTIONAL PUSHORT IntegerAtom
 	);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define EVENT_MIN_LEVEL                      (0)
 #define EVENT_MAX_LEVEL                      (0xff)
 
@@ -11531,11 +11497,6 @@ extern "C" {
 		ULONG       Size;
 		ULONG       Type;
 	} EVENT_FILTER_DESCRIPTOR, *PEVENT_FILTER_DESCRIPTOR;
-
-#ifdef __cplusplus
-}
-#endif
-
 
 //
 // old nt4 channel stuff
@@ -11674,10 +11635,6 @@ typedef union _SLIST_HEADER {
 //
 // prototypes *must* be encapsulated with extern "C" macros at start and end of prototype block
 //
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 PSLIST_ENTRY
 __fastcall
